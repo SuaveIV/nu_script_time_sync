@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # Check system time accuracy using the official Time.now API.
-def main [
+def time-sync [
     --max-offset: duration = 5sec  # Threshold for 'out of sync' status
     --max-rtt: duration = 2sec     # Maximum latency allowed for a reliable check
     --raw                          # Output raw record for automation
