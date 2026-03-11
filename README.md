@@ -49,7 +49,8 @@ RTT:         204ms
 | ------ | --------- | -------------- |
 | `--max-offset` | `5sec` | How much drift is allowed before marking as out of sync |
 | `--max-rtt` | `2sec` | Round-trip time cutoff — above this, the check is flagged as unreliable |
-| `--raw` | — | Returns a raw record instead of printing. Useful for scripting. |
+| `--one-line` `-1` | — | Compact single-line output: `IN SYNC  14:32:07 → 14:32:07  312ms` |
+| `--raw` `-r` | — | Returns a raw record instead of printing. Useful for scripting. |
 
 ### Automation / piping
 

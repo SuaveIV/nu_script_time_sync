@@ -4,7 +4,8 @@
 def time-sync [
     --max-offset: duration = 5sec  # Threshold for 'out of sync' status
     --max-rtt: duration = 2sec     # Maximum latency allowed for a reliable check
-    --raw                          # Output raw record for automation
+    --raw (-r)                     # Output raw record for automation
+    --one-line (-1)                # Compact single-line output
 ]: [
     nothing -> record   # Logic path for --raw
     nothing -> nothing  # Logic path for terminal display
@@ -27,6 +28,8 @@ def time-sync [
     # Use if/else expression to satisfy multi-signature return paths
     if $raw {
         $report
+    } else if $one_line {
+        display-one-line $report
     } else {
         display-report $report
     }
@@ -73,6 +76,15 @@ def calculate-drift [
         reliable: ($ctx.rtt < $ctx.rtt_limit),
         timezone: ($data.timezone? | default Unknown)
     }
+}
+
+def display-one-line [report: record]: nothing -> nothing {
+    let status_color = if $report.synced { "green_bold" } else { "red_bold" }
+    let status = if $report.synced { "IN SYNC" } else { "OUT OF SYNC" }
+    let local = ($report.local | format date %H:%M:%S)
+    let network = ($report.network | format date %H:%M:%S)
+
+    print $"(ansi $status_color)($status)(ansi reset)  ($local) → ($network)  ($report.drift)"
 }
 
 def display-report [report: record]: nothing -> nothing {
