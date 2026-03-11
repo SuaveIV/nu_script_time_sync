@@ -1,4 +1,4 @@
-# time_sync.nu
+# nu_script_time_sync
 
 A Nushell script that checks whether your system clock is drifting. It hits the [Time.now API](https://time.now/developer/api/ip), compares the result to your local time, and tells you if something's off.
 
@@ -9,7 +9,7 @@ System clocks drift. NTP usually handles it, but sometimes it doesn't — suspen
 ## Usage
 
 ```nushell
-nu time_sync.nu
+nu time-sync.nu
 ```
 
 That prints a human-readable report:
