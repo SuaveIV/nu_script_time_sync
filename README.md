@@ -32,16 +32,11 @@ time-sync --raw
 
 That prints a human-readable report:
 
-```sh
---- World Time API by Time.Now ---
-Status:      IN SYNC
-Reliability: Reliable (Low Latency)
-Timezone:    America/New_York
-Local:       14:32:07
-Network:     14:32:07
-Drift:       312ms
-RTT:         204ms
-```
+<img width="400" height="191" alt="image" src="https://github.com/user-attachments/assets/d2651d55-6c48-496d-a2ab-bc4ae45fa111" />
+
+or run with the `-1` flag to get a one-line output:
+
+<img width="532" height="65" alt="image" src="https://github.com/user-attachments/assets/7bac54e5-4288-4f86-b645-bf0ad2f4864f" />
 
 ### Flags
 
