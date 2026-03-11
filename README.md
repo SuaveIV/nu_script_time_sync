@@ -73,3 +73,5 @@ If the RTT is high (above `--max-rtt`), the result is flagged as unreliable — 
 
 - The script uses optional cell paths (`?`) when parsing the API response, so it won't crash if the response shape changes slightly
 - Errors from the network call surface with a helpful message rather than a raw stack trace
+
+[World Time API by Time.Now](https://time.now)
