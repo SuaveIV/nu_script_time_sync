@@ -16,17 +16,13 @@ nu world-time.nu london
 nu world-time.nu "new york"
 ```
 
-Output:
+This prints a formatted report:
 
-```sh
---- World Time API by Time.Now ---
-Timezone:    Asia/Tokyo (JST)
-Time:        23:15:42
-Date:        2026-03-11
-Day:         Wednesday (Week 11)
-UTC Offset:  +09:00
-DST:         Inactive
-```
+<img width="541" height="326" alt="Image" src="https://github.com/user-attachments/assets/b9398813-b52e-4ef4-af9f-142b5cf3f05b" />
+
+For a one-line summary, use `-1` (or `--one-line`):
+
+<img width="520" height="53" alt="Image" src="https://github.com/user-attachments/assets/8253b768-97aa-445d-a1f2-ce292616a195" />
 
 ### Exact IANA timezones
 
@@ -66,6 +62,7 @@ world-time -l
 | ---- | ----- | ------------ |
 | `--list` | `-l` | Prints all ~600 available IANA timezone strings |
 | `--force-cache` | `-f` | Forces a refresh of the cached timezone list |
+| `--one-line` | `-1` | Output a single concise line instead of a full block |
 | `--raw` | `-r` | Returns a raw JSON record for scripting instead of formatted text |
 
 ### Scripting
