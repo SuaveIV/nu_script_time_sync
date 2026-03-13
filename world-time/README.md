@@ -1,6 +1,9 @@
 # world-time.nu
 
-A script to look up the current time in any timezone using the [Time.now API](https://time.now/developer/api). It uses fuzzy matching, so you can just type "tokyo" instead of trying to remember if it's "Asia/Tokyo" or "Japan".
+[![Nushell](https://img.shields.io/badge/Nushell-%3E%3D0.111-4E9900.svg?logo=nushell)](https://www.nushell.sh/)
+[![Time.now API](https://img.shields.io/badge/Powered%20by-Time.now-blue)](https://time.now/developer)
+
+A script to look up the current time in any timezone using the [Time.now API](https://time.now/developer/). It uses fuzzy matching, so you can just type "tokyo" instead of trying to remember if it's "Asia/Tokyo" or "Japan".
 
 ## Why I wrote this
 

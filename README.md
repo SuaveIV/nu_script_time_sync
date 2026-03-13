@@ -1,6 +1,9 @@
 # time-sync.nu
 
-A Nushell script to check if your system clock is drifting. It queries the [Time.now API](https://time.now/developer/api/ip), compares the result to your local time, and tells you if your clock is out of sync.
+[![Nushell](https://img.shields.io/badge/Nushell-%3E%3D0.111-4E9900.svg?logo=nushell)](https://www.nushell.sh/)
+[![Time.now API](https://img.shields.io/badge/Powered%20by-Time.now-blue)](https://time.now/developer)
+
+A Nushell script to check if your system clock is drifting. It queries the [Time.now API](https://time.now/developer/), compares the result to your local time, and tells you if your clock is out of sync.
 
 ## Why I wrote this
 
