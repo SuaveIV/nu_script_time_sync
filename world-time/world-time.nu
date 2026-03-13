@@ -2,7 +2,7 @@
 
 # Look up current time in any timezone using the Time.now API.
 # nu-lint-ignore: print_and_return_data
-def world-time [
+export def main [
     query?: string              # City, region, or IANA timezone (e.g., "tokyo", "Europe/Paris")
     --force-cache (-f)          # Force refresh of cached timezone list
     --raw (-r)                  # Output raw record for automation
@@ -30,7 +30,7 @@ def world-time [
     }
 
     let zones = get-timezone-list --force-refresh=$force_cache
-    let matched = if $raw {
+    let matched = if $raw or $one_line {
         find-timezone $query $zones --raw
     } else {
         find-timezone $query $zones

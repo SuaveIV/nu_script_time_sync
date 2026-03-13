@@ -16,10 +16,10 @@ nu time-sync.nu
 
 ### Install as a command
 
-Source it in your `config.nu` to use it anywhere:
+Use it as a module in your `config.nu` to use it anywhere:
 
 ```nushell
-source /path/to/time-sync.nu
+use /path/to/time-sync.nu
 ```
 
 Then run it:

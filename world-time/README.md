@@ -37,10 +37,10 @@ nu world-time.nu America/Los_Angeles
 
 ### Install as a command
 
-Source it in your `config.nu`:
+Use it as a module in your `config.nu`:
 
 ```nushell
-source /path/to/world-time.nu
+use /path/to/world-time.nu
 ```
 
 Then you can drop the `.nu` and run it from anywhere:

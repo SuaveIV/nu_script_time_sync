@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 
 # Check system time accuracy using the official Time.now API.
-def time-sync [
+export def main [
     --max-offset: duration = 5sec  # Threshold for 'out of sync' status
     --max-rtt: duration = 2sec     # Maximum latency allowed for a reliable check
     --raw (-r)                     # Output raw record for automation
@@ -9,6 +9,7 @@ def time-sync [
 ]: [
     nothing -> record   # Logic path for --raw
     nothing -> nothing  # Logic path for terminal display
+    nothing -> string   # Logic path for --one-line
 ] {
     let start_time = (date now)
     let network_data = fetch-network-time
