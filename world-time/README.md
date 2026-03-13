@@ -1,10 +1,10 @@
 # world-time.nu
 
-Look up the current time in any timezone using the [Time.now API](https://time.now/developer/api). Fuzzy matching lets you type casual queries like "tokyo" instead of "Asia/Tokyo".
+A script to look up the current time in any timezone using the [Time.now API](https://time.now/developer/api). It uses fuzzy matching, so you can just type "tokyo" instead of trying to remember if it's "Asia/Tokyo" or "Japan".
 
-## Why this exists
+## Why I wrote this
 
-Sometimes you just need to know "what time is it in London?" without opening a browser. This script gives you instant, terminal-based timezone lookups with smart caching.
+I constantly need to know what time it is in other cities, and opening a browser or Googling it breaks my flow. I just wanted a fast timezone lookup right in the terminal that doesn't hit the network for things it already knows.
 
 ## Usage
 
@@ -28,14 +28,14 @@ UTC Offset:  +09:00
 DST:         Inactive
 ```
 
-### Using exact IANA timezone strings
+### Exact IANA timezones
 
 ```nushell
 nu world-time.nu Europe/Paris
 nu world-time.nu America/Los_Angeles
 ```
 
-### As a shell command
+### Install as a command
 
 Source it in your `config.nu`:
 
@@ -43,7 +43,7 @@ Source it in your `config.nu`:
 source /path/to/world-time.nu
 ```
 
-Then use it directly:
+Then you can drop the `.nu` and run it from anywhere:
 
 ```nushell
 world-time sydney
@@ -52,11 +52,11 @@ world-time berlin --raw
 world-time tokyo -r
 ```
 
-### List all available timezones
+### See all timezones
 
 ```nushell
 world-time --list
-# or with aliased command:
+# or with the alias:
 world-time -l
 ```
 
@@ -64,52 +64,52 @@ world-time -l
 
 | Flag | Alias | What it does |
 | ---- | ----- | ------------ |
-| `--list` | `-l` | Show all ~600 available IANA timezone strings |
-| `--force-cache` | `-f` | Force refresh the cached timezone list (normally cached for 180 days) |
-| `--raw` | `-r` | Return raw JSON record for scripting (no terminal formatting) |
+| `--list` | `-l` | Prints all ~600 available IANA timezone strings |
+| `--force-cache` | `-f` | Forces a refresh of the cached timezone list |
+| `--raw` | `-r` | Returns a raw JSON record for scripting instead of formatted text |
 
-### Scripting / automation
+### Scripting
 
 ```nushell
-# Get raw data for pipeline processing
+# Get raw data for a pipeline
 let tokyo_time = (world-time tokyo --raw)
 if ($tokyo_time.dst) {
     print "Tokyo is currently observing DST"
 }
 
-# Compare timezones
+# Compare two timezones
 let utc_offset_tokyo = (world-time tokyo --raw | get utc_offset)
 let utc_offset_london = (world-time london --raw | get utc_offset)
 ```
 
 ## How it works
 
-1. **First run**: Fetches the complete list of ~600 IANA timezones from the Time.now API and caches it locally
-2. **Fuzzy matching**: Your query (like "paris") is matched against the cached list to find "Europe/Paris"
-3. **Time lookup**: Fetches current time data for the matched timezone
-4. **Caching**: The timezone list is cached for 180 days in `$nu.cache-dir/time-now-zones.json`
+1. **First run**: Fetches the complete list of ~600 IANA timezones from the API and caches it locally.
+2. **Matching**: Matches your query (like "paris") against the cached list to find the actual timezone ("Europe/Paris").
+3. **Lookup**: Fetches the current time data for that specific timezone.
+4. **Caching**: The timezone list gets cached for 180 days in `$nu.cache-dir/time-now-zones.json`.
 
-### Fuzzy matching examples
+### Fuzzy matching
 
 ```nushell
 world-time tokyo       # → Asia/Tokyo
 world-time reykjavik   # → Atlantic/Reykjavik
-world-time new         # → Multiple matches, picks best (e.g., America/New_York)
+world-time new         # → Multiple matches, picks the best (e.g., America/New_York)
 world-time "ho chi"    # → Asia/Ho_Chi_Minh
 ```
 
-If multiple timezones match your query, the script picks the shortest/most specific one and shows you the alternatives.
+If multiple timezones match your query, the script picks the shortest one and prints the alternatives so you know what else matched.
 
-### Offline mode
+### Offline fallback
 
-If the network is unreachable but you have a stale cache, the script will warn you and use the cached timezone list. Time lookups still require internet access.
+If your network drops but you have a stale cache, the script prints a warning and uses the cached timezone list anyway. You still need internet access to actually fetch the current time, though.
 
 ## Requirements
 
-- [Nushell](https://www.nushell.sh/) — tested on recent stable versions
-- Internet access to reach the Time.now API
+- [Nushell](https://www.nushell.sh/)
+- Internet access
 
-## Complementary tool
+## Related tool
 
 This pairs well with `time-sync.nu` from the same repository:
 
@@ -118,9 +118,9 @@ This pairs well with `time-sync.nu` from the same repository:
 
 ## Notes
 
-- The timezone list is fetched from Time.now's `/timezone` endpoint and includes all valid IANA timezone identifiers
-- Cache location: `$nu.cache-dir/time-now-zones.json`
-- Cache lifetime: 180 days (biannual refresh - timezone names rarely change)
-- The script uses defensive programming patterns (optional cellpaths, try-catch) so it won't crash on unexpected API responses
+- The timezone list comes from Time.now's `/timezone` endpoint.
+- Cache location: `$nu.cache-dir/time-now-zones.json`.
+- The cache lasts 180 days since timezone names rarely change.
+- The script uses defensive parsing (`?` cell paths, try-catch blocks) so it won't crash if the API response changes.
 
 [World Time API by Time.Now](https://time.now)
