@@ -6,9 +6,11 @@ def world-time [
     query?: string              # City, region, or IANA timezone (e.g., "tokyo", "Europe/Paris")
     --force-cache (-f)          # Force refresh of cached timezone list
     --raw (-r)                  # Output raw record for automation
+    --one-line (-1)             # Output a single concise line
     --list (-l)                 # List all available timezones
 ]: [
     nothing -> record           # Logic path for --raw
+    nothing -> string           # Logic path for --one-line
     nothing -> nothing          # Logic path for terminal display
 ] {
     # Handle --list flag
@@ -44,7 +46,8 @@ def world-time [
         }
     }
 
-    if $raw { $time_data } else { display-time $time_data }
+    let ctx = {raw: $raw, one_line: $one_line}
+    dispatch-display $time_data $ctx
 }
 
 # --- Helper Functions ---
@@ -55,11 +58,11 @@ def should-use-cache [
     if $config.force_refresh {
         return false
     }
-    
+
     if not ($config.cache_file | path exists) {
         return false
     }
-    
+
     let cache_modified = try { ls $config.cache_file | get modified | first } catch { date now }
     let now = date now
     let age_duration = $now - $cache_modified
@@ -76,7 +79,7 @@ def fetch-zones-with-fallback [
         # If fetch fails and we have stale cache, use it
         if ($cache_file | path exists) {
             print $"(ansi yellow_italic)Warning: Using stale timezone cache \(offline mode\)(ansi reset)"
-            return (try { open $cache_file } catch { 
+            return (try { open $cache_file } catch {
                 error make {
                     msg: "Network unreachable and cache corrupted"
                     label: {
@@ -87,7 +90,7 @@ def fetch-zones-with-fallback [
                 }
             })
         }
-        
+
         error make {
             msg: "Network unreachable"
             label: {
@@ -126,7 +129,7 @@ def get-timezone-list [
             # Cache file corrupted, fall through to fetch
         }
     }
-    
+
     fetch-zones-with-fallback $cache_file
 }
 
@@ -138,11 +141,11 @@ def score-timezone-matches [
         let loc_name = ($z | split row / | last | str downcase)
         let loc_dist = ($loc_name | str distance $ctx.query_lower)
         let min_dist = if $full_dist < $loc_dist { $full_dist } else { $loc_dist }
-        
+
         let is_loc_prefix = ($loc_name | str starts-with $ctx.query_lower)
         let is_substring = ($z =~ ('(?i)' + $ctx.escaped))
         let is_subseq = ($z =~ ('(?i)' + $ctx.fuzzy_pattern))
-        
+
         # Scoring: Give massive distance reductions for high-quality matches
         let final_dist = if $is_loc_prefix {
             $min_dist - 300
@@ -153,7 +156,7 @@ def score-timezone-matches [
         } else {
             $min_dist
         }
-        
+
         {zone: $z, dist: $final_dist}
     } | sort-by dist
 }
@@ -171,10 +174,10 @@ def find-timezone [query: string, zones: list<string>, --raw]: nothing -> string
     }
 
     # 2. Fuzzy match: combine subsequence (abbreviation) and Levenshtein distance (typos)
-    let fuzzy_pattern = ($query | split chars | where $it != "" | each {|c| 
-        $c | str replace --all --regex "([\\[\\]\\(\\)\\*\\+\\?\\^\\$\\.\\|\\\\])" \$1 
+    let fuzzy_pattern = ($query | split chars | where $it != "" | each {|c|
+        $c | str replace --all --regex "([\\[\\]\\(\\)\\*\\+\\?\\^\\$\\.\\|\\\\])" \$1
     } | str join ".*")
-    
+
     let ctx = {
         query_lower: $query_lower,
         escaped: $escaped,
@@ -183,10 +186,10 @@ def find-timezone [query: string, zones: list<string>, --raw]: nothing -> string
     let scored_zones = ($zones | score-timezone-matches $ctx)
 
     let best_match = $scored_zones | first
-    
+
     # Allow reasonable typo distance: Length/2 + 2. Valid subsequence/substring matches easily pass (dist < 0).
     let max_allowed_dist = (($query | str length) / 2 | math floor) + 2
-    
+
     if $best_match.dist > $max_allowed_dist {
         error make {
             msg: $"No timezone found matching '($query)'"
@@ -257,7 +260,7 @@ def display-time [
     # Format time and date
     let time = $datetime | format date %H:%M:%S
     let date = $datetime | format date %Y-%m-%d
-    
+
     # DST indicator
     let dst_status = if $dst {
         $"(ansi green)Active(ansi reset)"
@@ -274,4 +277,35 @@ Day:         ($day_of_week) \(Week ($week_num)\)
 UTC Offset:  ($utc_offset)
 DST:         ($dst_status)
 "
+}
+
+def display-time-oneline [
+    data: record
+]: nothing -> string {
+    let timezone = $data.timezone? | default Unknown
+    let datetime = $data.datetime? | default "" | into datetime
+    let abbreviation = $data.abbreviation? | default ""
+    let utc_offset = $data.utc_offset? | default +00:00
+
+    let time = $datetime | format date %H:%M:%S
+    let date = $datetime | format date %Y-%m-%d
+
+    $"($timezone) \(($abbreviation)\): ($date) ($time) \(($utc_offset)\)"
+}
+
+def dispatch-display [
+    data: record
+    ctx: record
+]: [
+    nothing -> record
+    nothing -> string
+    nothing -> nothing
+] {
+    if $ctx.raw {
+        $data
+    } else if $ctx.one_line {
+        display-time-oneline $data
+    } else {
+        display-time $data
+    }
 }
