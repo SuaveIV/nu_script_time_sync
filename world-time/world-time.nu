@@ -28,7 +28,11 @@ def world-time [
     }
 
     let zones = get-timezone-list --force-refresh=$force_cache
-    let matched = find-timezone $query $zones
+    let matched = if $raw {
+        find-timezone $query $zones --raw
+    } else {
+        find-timezone $query $zones
+    }
 
     let time_data = try {
         fetch-timezone-time $matched
@@ -126,26 +130,64 @@ def get-timezone-list [
     fetch-zones-with-fallback $cache_file
 }
 
-# nu-lint-ignore: list_param_to_variadic
-def find-timezone [query: string, zones: list<string>]: nothing -> string {
-    # Try exact match first (case-insensitive)
-    let exact = $zones | where (($it | str downcase) == ($query | str downcase))
+def score-timezone-matches [
+    ctx: record
+]: list<string> -> list<record> {
+    each {|z|
+        let full_dist = ($z | str downcase | str distance $ctx.query_lower)
+        let loc_name = ($z | split row / | last | str downcase)
+        let loc_dist = ($loc_name | str distance $ctx.query_lower)
+        let min_dist = if $full_dist < $loc_dist { $full_dist } else { $loc_dist }
+        
+        let is_loc_prefix = ($loc_name | str starts-with $ctx.query_lower)
+        let is_substring = ($z =~ ('(?i)' + $ctx.escaped))
+        let is_subseq = ($z =~ ('(?i)' + $ctx.fuzzy_pattern))
+        
+        # Scoring: Give massive distance reductions for high-quality matches
+        let final_dist = if $is_loc_prefix {
+            $min_dist - 300
+        } else if $is_substring {
+            $min_dist - 200
+        } else if $is_subseq {
+            $min_dist - 100
+        } else {
+            $min_dist
+        }
+        
+        {zone: $z, dist: $final_dist}
+    } | sort-by dist
+}
+
+# nu-lint-ignore: list_param_to_variadic, max_function_body_length
+def find-timezone [query: string, zones: list<string>, --raw]: nothing -> string {
+    let query_lower = ($query | str downcase)
+    # Escape regex metacharacters in query for safe matching
+    let escaped = ($query | str replace --all --regex "([\\[\\]\\(\\)\\*\\+\\?\\^\\$\\.\\|\\\\])" \$1)
+
+    # 1. Try exact match first (case-insensitive)
+    let exact = $zones | where $it =~ ('(?i)^' + $escaped + '$')
     if ($exact | is-not-empty) {
         return ($exact | first)
     }
 
-    # Try IANA format match (Area/Location)
-    if ($query =~ /) {
-        let iana_match = $zones | where (($it | str downcase) == ($query | str downcase))
-        if ($iana_match | is-not-empty) {
-            return ($iana_match | first)
-        }
+    # 2. Fuzzy match: combine subsequence (abbreviation) and Levenshtein distance (typos)
+    let fuzzy_pattern = ($query | split chars | where $it != "" | each {|c| 
+        $c | str replace --all --regex "([\\[\\]\\(\\)\\*\\+\\?\\^\\$\\.\\|\\\\])" \$1 
+    } | str join ".*")
+    
+    let ctx = {
+        query_lower: $query_lower,
+        escaped: $escaped,
+        fuzzy_pattern: $fuzzy_pattern
     }
+    let scored_zones = ($zones | score-timezone-matches $ctx)
 
-    # Fuzzy match: case-insensitive substring
-    let fuzzy = $zones | where ($it | str downcase | str contains ($query | str downcase))
-
-    if ($fuzzy | is-empty) {
+    let best_match = $scored_zones | first
+    
+    # Allow reasonable typo distance: Length/2 + 2. Valid subsequence/substring matches easily pass (dist < 0).
+    let max_allowed_dist = (($query | str length) / 2 | math floor) + 2
+    
+    if $best_match.dist > $max_allowed_dist {
         error make {
             msg: $"No timezone found matching '($query)'"
             label: {
@@ -156,38 +198,31 @@ def find-timezone [query: string, zones: list<string>]: nothing -> string {
         }
     }
 
-    # If multiple matches, prefer shorter ones (more specific)
-    let best = $fuzzy | sort-by {|zone| $zone | str length } | first
+    # Show alternatives for ambiguous matches (within reasonable point range)
+    let margin = if $best_match.dist < 0 { 15 } else { 2 }
+    let close_matches = $scored_zones | where dist <= ($best_match.dist + $margin) | get zone
 
-    # Show what we matched if ambiguous
-    if ($fuzzy | length) > 1 {
-        print $"(ansi yellow_italic)Multiple matches found. Using: ($best)(ansi reset)"
-        print $"(ansi dark_gray)Other options: ($fuzzy | skip 1 | str join ', ')(ansi reset)\n"
+    if not $raw {
+        if ($close_matches | length) > 1 {
+            print $"(ansi yellow_italic)Multiple fuzzy matches found. Using: ($best_match.zone)(ansi reset)"
+            let other_options = $close_matches | skip 1 | take 5 | str join ', '
+            print $"(ansi dark_gray)Other options: ($other_options)(ansi reset)\n"
+        } else if $best_match.dist >= 0 {
+            print $"(ansi yellow_italic)Typo corrected. Using: ($best_match.zone)(ansi reset)\n"
+        }
     }
 
-    $best
+    $best_match.zone
 }
 
 def fetch-timezone-time [
     timezone: string
 ]: nothing -> record {
-    let parts = $timezone | split row /
-    let area = $parts.0? | default ""
-    let location = $parts.1? | default ""
-    
-    if ($parts | length) != 2 {
-        error make {
-            msg: "Invalid timezone format"
-            label: {
-                text: "Expected Area/Location format"
-                span: (metadata $timezone).span
-            }
-            help: $"Expected Area/Location format, got: ($timezone)"
-        }
-    }
+    # The API accepts the timezone identifier directly, even if it has no slashes (e.g., 'Zulu', 'Poland')
+    # or multiple slashes (e.g., 'America/Indiana/Indianapolis').
 
     try {
-        http get --max-time 5sec $"https://time.now/developer/api/timezone/($area)/($location)"
+        http get --max-time 5sec $"https://time.now/developer/api/timezone/($timezone)"
     } catch {
         error make {
             msg: "Failed to fetch timezone data"
